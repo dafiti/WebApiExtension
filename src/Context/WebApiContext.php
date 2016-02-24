@@ -296,6 +296,94 @@ class WebApiContext implements ApiClientAwareContext
     }
 
     /**
+     * @Given /^the response json should have a "([^"]*)" key$/
+     */
+    public function theResponseJsonShouldHaveAKey($keyword)
+    {
+        Assertions::assertArrayHasKey($keyword, $this->getResponse()->json());
+    }
+
+    /**
+     * @Given /^the response json should have a "([^"]*)" key with value "([^"]*)"$/
+     */
+    public function theResponseJsonShouldHaveAKeyWithSpecificValue($keyword, $value)
+    {
+        Assertions::assertEquals($this->getResponse()->json()[$keyword], $value);
+    }
+
+    /**
+     * @Given /^the key "([^"]*)" should have a subkey "([^"]*)"$/
+     */
+    public function theKeyShouldHaveASubKey($keyword, $subkeyword)
+    {
+        $keywordToSearch = $this->getResponse()->json()[$keyword];
+        if (is_array($keywordToSearch)) {
+            foreach ($keywordToSearch as $key => $value) {
+                Assertions::assertArrayHasKey($subkeyword, $value);
+            }
+        } else {
+            Assertions::assertArrayHasKey($subkeyword, $this->getResponse()->json()[$keyword]);
+        }
+    }
+
+    /**
+     * @Given /^the key "([^"]*)" should have a subkey "([^"]*)" in index (\d+)$/
+     */
+    public function theKeyShouldHaveASubKeyInSpecificIndex($keyword, $subkeyword, $index)
+    {
+        Assertions::assertArrayHasKey($subkeyword, $this->getResponse()->json()[$keyword][$index]);
+    }
+
+    /**
+     * @Given /^the response json's "([^"]*)" key should be of type "([^"]*)"$/
+     */
+    public function theResponseJsonSKeyShouldBeOfType($keyword, $expectedType)
+    {
+        Assertions::assertAttributeInternalType($expectedType, $keyword, (object) $this->getResponse()->json());
+    }
+
+    /**
+     * Checks that response body contains JSON from PyString.
+     *
+     * Do not check that the response body /only/ contains the JSON from PyString,
+     *
+     * @param PyStringNode $jsonString
+     *
+     * @throws \RuntimeException
+     *
+     * @Override @Then /^(?:the )?response should contain json:$/
+     */
+    public function theResponseShouldContainJsonWithoutAnyFields(PyStringNode $jsonString)
+    {
+        $etalon = json_decode($this->replacePlaceHolder($jsonString->getRaw()), true);
+        $actual = $this->getResponse()->json();
+
+        if (null === $etalon) {
+            throw new \RuntimeException(
+                "Can not convert etalon to json:\n" . $this->replacePlaceHolder(
+                    $jsonString->getRaw()
+                )
+            );
+        }
+
+        Assertions::assertGreaterThanOrEqual(count($etalon), count($actual));
+        foreach ($etalon as $key => $needle) {
+            if (is_array($needle)) {
+                foreach ($needle as $k => $v) {
+                    if (in_array('id', array_keys($v))) {
+                        continue 2;
+                    }
+                }
+            }
+            if (in_array($key, ['id', 'updated_at', 'created_at', 'start_at', 'end_at'])) {
+                continue;
+            }
+            Assertions::assertArrayHasKey($key, $actual);
+            Assertions::assertEquals($etalon[$key], $actual[$key]);
+        }
+    }
+
+    /**
      * Prepare URL by replacing placeholders and trimming slashes.
      *
      * @param string $url
