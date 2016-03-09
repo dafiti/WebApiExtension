@@ -113,6 +113,8 @@ class WebApiContext implements ApiClientAwareContext
     public function iSendARequest($method, $url)
     {
         $url = $this->prepareUrl($url);
+
+        $this->headers = ['Content-Type' =>'application/json'];
         $this->request = $this->getClient()->createRequest($method, $url);
         if (!empty($this->headers)) {
             $this->request->addHeaders($this->headers);
@@ -166,6 +168,7 @@ class WebApiContext implements ApiClientAwareContext
         $url = $this->prepareUrl($url);
         $string = $this->replacePlaceHolder(trim($string));
 
+        $this->headers = ['Content-Type' =>'application/json'];
         $this->request = $this->getClient()->createRequest(
             $method,
             $url,
