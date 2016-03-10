@@ -169,7 +169,7 @@ class WebApiContext implements ApiClientAwareContext
         parse_str(implode('&', explode("\n", $body)), $fields);
 
         foreach ($fields as $key => $value) {
-            if(is_array($value)) {
+            if (is_array($value)) {
                 foreach ($value as $formKey => $formValue) {
                     $requestFields[] = sprintf('%s%s=%s', urlencode($key), urlencode('[' . $formKey . ']'), urlencode($formValue));
                 }
@@ -246,7 +246,7 @@ class WebApiContext implements ApiClientAwareContext
 
         if (null === $expected) {
             throw new \RuntimeException(
-              "Can not convert expected to json:\n".$this->replacePlaceHolder($jsonString->getRaw())
+                "Can not convert expected to json:\n".$this->replacePlaceHolder($jsonString->getRaw())
             );
         }
 
@@ -288,7 +288,7 @@ class WebApiContext implements ApiClientAwareContext
      */
     public function theResponseJsonShouldHaveAKey($keyword)
     {
-        Assertions::assertArrayHasKey($keyword, $this->getResponse()->json());
+        Assertions::assertObjectHasAttribute($keyword, json_decode($this->getResponse()->getBody()));
     }
 
     /**
@@ -296,7 +296,7 @@ class WebApiContext implements ApiClientAwareContext
      */
     public function theResponseJsonShouldHaveAKeyWithSpecificValue($keyword, $value)
     {
-        Assertions::assertEquals($this->getResponse()->json()[$keyword], $value);
+        Assertions::assertEquals(json_decode($this->getResponse()->getBody())->$keyword, $value);
     }
 
     /**
@@ -304,14 +304,7 @@ class WebApiContext implements ApiClientAwareContext
      */
     public function theKeyShouldHaveASubKey($keyword, $subkeyword)
     {
-        $keywordToSearch = $this->getResponse()->json()[$keyword];
-        if (is_array($keywordToSearch)) {
-            foreach ($keywordToSearch as $key => $value) {
-                Assertions::assertArrayHasKey($subkeyword, $value);
-            }
-        } else {
-            Assertions::assertArrayHasKey($subkeyword, $this->getResponse()->json()[$keyword]);
-        }
+        Assertions::assertObjectHasAttribute($subkeyword, json_decode($this->getResponse()->getBody())->$keyword);
     }
 
     /**
@@ -319,7 +312,8 @@ class WebApiContext implements ApiClientAwareContext
      */
     public function theKeyShouldHaveASubKeyInSpecificIndex($keyword, $subkeyword, $index)
     {
-        Assertions::assertArrayHasKey($subkeyword, $this->getResponse()->json()[$keyword][$index]);
+        $value = json_decode($this->getResponse()->getBody())->$keyword;
+        Assertions::assertObjectHasAttribute($subkeyword, $value[$index]);
     }
 
     /**
