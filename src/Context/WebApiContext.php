@@ -111,7 +111,6 @@ class WebApiContext implements ApiClientAwareContext
     {
         $url = $this->prepareUrl($url);
 
-        $this->headers = ['Content-Type' =>'application/json'];
         $this->request = new Request($method, $url, $this->getHeaders());
 
         $this->sendRequest();
@@ -135,7 +134,6 @@ class WebApiContext implements ApiClientAwareContext
             $fields[$key] = $this->replacePlaceHolder($val);
         }
 
-        $this->headers = ['Content-Type' =>'application/json'];
         $this->request = new Request($method, $url, $this->getHeaders(), json_encode($fields));
 
         $this->sendRequest();
@@ -155,7 +153,6 @@ class WebApiContext implements ApiClientAwareContext
         $url = $this->prepareUrl($url);
         $string = $this->replacePlaceHolder(trim($string));
 
-        $this->headers = ['Content-Type' =>'application/json'];
         $this->request = new Request($method, $url, $this->getHeaders(), $string);
 
         $this->sendRequest();
