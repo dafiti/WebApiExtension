@@ -110,6 +110,7 @@ class WebApiContext implements ApiClientAwareContext
     public function iSendARequest($method, $url)
     {
         $url = $this->prepareUrl($url);
+        $url = $this->replacePlaceHolder(trim($url));
 
         $this->request = new Request($method, $url, $this->getHeaders());
 
@@ -151,6 +152,8 @@ class WebApiContext implements ApiClientAwareContext
     public function iSendARequestWithBody($method, $url, PyStringNode $string)
     {
         $url = $this->prepareUrl($url);
+        $url = $this->replacePlaceHolder(trim($url));
+
         $string = $this->replacePlaceHolder(trim($string));
 
         $this->request = new Request($method, $url, $this->getHeaders(), $string);
@@ -170,6 +173,8 @@ class WebApiContext implements ApiClientAwareContext
     public function iSendARequestWithFormData($method, $url, PyStringNode $body)
     {
         $url = $this->prepareUrl($url);
+        $url = $this->replacePlaceHolder(trim($url));
+
         $body = $this->replacePlaceHolder(trim($body));
 
         $fields = array();
@@ -249,17 +254,32 @@ class WebApiContext implements ApiClientAwareContext
      */
     public function theResponseShouldContainJson(PyStringNode $jsonString)
     {
-        $expected = json_decode($this->replacePlaceHolder($jsonString->getRaw()), true);
-        $actual = json_decode($this->response->getBody(), true);
+        $etalon = json_decode($this->replacePlaceHolder($jsonString->getRaw()), true);
+        $actual = json_decode($this->getResponse()->getBody(), true);
 
-        if (null === $expected) {
+        if (null === $etalon) {
             throw new \RuntimeException(
-                "Can not convert expected to json:\n".$this->replacePlaceHolder($jsonString->getRaw())
+                "Can not convert etalon to json:\n" . $this->replacePlaceHolder(
+                    $jsonString->getRaw()
+                )
             );
         }
 
-        Assertions::assertGreaterThanOrEqual(count($expected), count($actual));
-        $this->assertContains($expected, $actual);
+        Assertions::assertGreaterThanOrEqual(count($etalon), count($actual));
+        foreach ($etalon as $key => $needle) {
+            if (is_array($needle)) {
+                foreach ($needle as $k => $v) {
+                    if (is_array($v) && in_array('id', array_keys($v))) {
+                        continue 2;
+                    }
+                }
+            }
+            if (in_array($key, ['id', 'updated_at', 'created_at', 'start_at', 'end_at', 'slug'])) {
+                continue;
+            }
+            Assertions::assertArrayHasKey($key, $actual);
+            Assertions::assertEquals($etalon[$key], $actual[$key]);
+        }
     }
 
     /**
@@ -316,6 +336,15 @@ class WebApiContext implements ApiClientAwareContext
     }
 
     /**
+     * @Given /^the key "([^"]*)" should have a subkey "([^"]*)" with value (\d+)$/
+     * @Given /^the key "([^"]*)" should have a subkey "([^"]*)" with value "([^"]*)?"$/
+     */
+    public function theKeyShouldHaveASubKeyWithValue($keyword, $subkeyword, $value)
+    {
+        Assertions::assertEquals($value, json_decode($this->getResponse()->getBody())->$keyword->$subkeyword);
+    }
+
+    /**
      * @Given /^the key "([^"]*)" should have a subkey "([^"]*)" in index (\d+)$/
      */
     public function theKeyShouldHaveASubKeyInSpecificIndex($keyword, $subkeyword, $index)
@@ -330,47 +359,6 @@ class WebApiContext implements ApiClientAwareContext
     public function theResponseJsonSKeyShouldBeOfType($keyword, $expectedType)
     {
         Assertions::assertAttributeInternalType($expectedType, $keyword, (object) $this->getResponse()->json());
-    }
-
-    /**
-     * Checks that response body contains JSON from PyString.
-     *
-     * Do not check that the response body /only/ contains the JSON from PyString,
-     *
-     * @param PyStringNode $jsonString
-     *
-     * @throws \RuntimeException
-     *
-     * @Override @Then /^(?:the )?response should contain json:$/
-     */
-    public function theResponseShouldContainJsonWithoutAnyFields(PyStringNode $jsonString)
-    {
-        $etalon = json_decode($this->replacePlaceHolder($jsonString->getRaw()), true);
-        $actual = $this->getResponse()->json();
-
-        if (null === $etalon) {
-            throw new \RuntimeException(
-                "Can not convert etalon to json:\n" . $this->replacePlaceHolder(
-                    $jsonString->getRaw()
-                )
-            );
-        }
-
-        Assertions::assertGreaterThanOrEqual(count($etalon), count($actual));
-        foreach ($etalon as $key => $needle) {
-            if (is_array($needle)) {
-                foreach ($needle as $k => $v) {
-                    if (in_array('id', array_keys($v))) {
-                        continue 2;
-                    }
-                }
-            }
-            if (in_array($key, ['id', 'updated_at', 'created_at', 'start_at', 'end_at'])) {
-                continue;
-            }
-            Assertions::assertArrayHasKey($key, $actual);
-            Assertions::assertEquals($etalon[$key], $actual[$key]);
-        }
     }
 
     /**
